@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2196f3">
+
+
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Global Weather App</title>
+  <style>
+
+/* Base Styles */
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;}
+body{background:#f5f5f5;margin:0;padding:0;}
+button, a, li {outline:none; -webkit-tap-highlight-color: transparent;}
+*:focus {outline:none;}
+
+/* Container */
+.page-container{padding:0px;}
+
+/* Navbar */
+.navbar{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;position:sticky;top:0;z-index:10;background:#FFFFF;}
+.navbar ul{display:flex;list-style:none;gap:15px;}
+.navbar ul li{cursor:pointer;padding:5px 10px;border-radius:5px;transition:0.3s;font-size:14px;}
+.navbar ul li:hover{background:rgba(0,0,0,0.05);}
+.hamburger{display:flex;flex-direction:column;cursor:pointer;gap:4px;}
+.hamburger div{width:25px;height:3px;background:black;border-radius:8px;}
+
+/* Mobile Navbar */
+@media(max-width:9868px){
+  .navbar ul {display:none;flex-direction:column;position:absolute;top:25px;right:150px;background:rgba(255,255,255,0.95);padding:10px;border-radius:12px;width:200px;}
+  .navbar ul.show {display:flex;}
+}
+
+/* Modals */
+.modal{display:none;position:fixed;z-index:200;left:0;top:0;width:100%;height:100%;background:rgba(255,255,255,0.95);justify-content:center;align-items:flex-start;padding-top:50px;}
+
+  
+  /* Desktop: modal at bottom */
+@media (min-width: 76000px) {
+  .modal {
+    justify-content: center;   /* horizontally center */
+    align-items: flex-end;     /* push content to bottom */
+    padding-top: 0;
+    padding-bottom: 30px;      /* little gap from bottom */
+  }
+
+  .modal-content {
+    margin: 0 auto;
+    border-radius: 12px 12px 0 0; /* round top corners only */
+    animation: slideUp 0.3s ease; /* smooth animation */
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+}
+  
+  
+.modal-content{background:#fff;padding:20px;border-radius:12px;width:95%;max-width:400px;position:relative;overflow:auto;}
+.modal-content h2{text-align:center;margin-bottom:15px;font-size:20px;}
+.modal-content label{display:block;margin-bottom:5px;color:#555;font-weight:bold;font-size:14px;}
+.modal-content input{width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #ccc;font-size:14px;}
+.modal-content button{width:100%;padding:12px;border:none;border-radius:6px;background:#007BFF;color:#fff;font-size:16px;cursor:pointer;transition:0.3s;}
+.modal-content button:hover{background:#0056b3;}
+.modal-content .close{position:absolute;top:10px;right:15px;font-size:22px;font-weight:bold;cursor:pointer;color:#333;}
+.error{color:red;font-size:12px;margin-bottom:8px;}
+.success{color:green;font-size:14px;text-align:center;margin-top:10px;}
+.redirect-login{text-align:center;margin-top:8px;font-size:12px;}
+.redirect-login a{color:#007BFF;text-decoration:none;font-weight:bold;}
+.redirect-login a:hover{text-decoration:underline;}
+
+/* Weather Dashboard */
+#weatherPage{display:none;margin-top:20px;}
+#weatherPage h1{text-align:center;margin-bottom:10px;font-size:18px;}
+.search-container{text-align:center;margin-bottom:15px;}
+#searchInputPage{padding:10px 12px;width:70%;max-width:250px;font-size:14px;border-radius:20px;border:1px solid #ccc;}
+#searchBtnPage{padding:10px 15px;margin-left:5px;font-size:14px;border-radius:20px;border:none;background-color:#4CAF50;color:white;cursor:pointer;}
+.dashboard{display:grid;grid-template-columns:1fr;gap:15px;}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);overflow:hidden;}
+.card .label{font-weight:bold;margin-bottom:8px;font-size:14px;}
+.bar-container{position:relative;height:25px;background:#eee;border-radius:12px;overflow:hidden;}
+.bar{height:100%;width:0;border-radius:12px;text-align:right;line-height:25px;padding-right:8px;color:white;font-weight:bold;position:relative;overflow:hidden;transition:width 1.5s ease, background 1s ease;}
+.value-label{margin-top:5px;font-size:12px;text-align:center;}
+
+/* Animations */
+#pressure-bar{background:linear-gradient(270deg,#FFC107,#FF9800,#FFC107);background-size:600% 100%;animation:gradientMove 4s ease infinite;}
+@keyframes gradientMove{0%{background-position:0% 0%;}100%{background-position:100% 0%;}}
+#visibility-bar{background:linear-gradient(90deg,#4CAF50 20%,#8BC34A 40%,#4CAF50 60%);background-size:200% 100%;animation:shimmer 2s linear infinite;}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0%;}}
+#uv-bar{background:linear-gradient(to right,#F44336,#FFC107);}
+*,
+*::before,
+*::after { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; -ms-user-select: none; user-select: none; touch-action: manipulation; }
+
+
+
+
+    :root {
+      --card-bg-light: rgba(255,255,255,0.7);
+      --card-bg-dark: rgba(255,255,255,0.1);
+    }
+    body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; transition: background .4s, color .4s; }
+    body.light { background: #e0f7fa; color: #000; }
+    body.dark  { background: #121212; color: #fff; }
+
+    .container { padding: 20px; max-width: 600px; margin: auto; position: relative; z-index: 2; text-align: center; }
+
+    .section { margin: 20px 0; padding: 20px; border-radius: 12px; transition: background .4s; width: 100%;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1); text-align: left; }
+    body.light .section { background: var(--card-bg-light); }
+    body.dark  .section { background: var(--card-bg-dark); }
+    .section h2, .section h3 { text-align: center; margin: 0 0 10px; }
+
+    input[type="text"] { padding: 10px; width: 70%; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; }
+    button { padding: 10px 15px; margin: 5px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+
+    .toggle-btn { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+    .background { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; transition: background .6s ease; }
+   
+  
+  
+  .sunny {
+    background: linear-gradient(to bottom, #87ceeb, #fdf6e3);
+  }
+
+  .cloudy {
+    background: linear-gradient(to bottom, #a1a1a1, #dcdcdc);
+  }
+
+  .rain {
+    background: linear-gradient(to bottom, #4a4a4a, #2c3e50);
+  }
+
+  .thunderstorm {
+    background: linear-gradient(to bottom, #232526, #414345);
+  }
+
+  .snowy {
+    background: linear-gradient(to bottom, #e0eafc, #cfdef3);
+  }
+
+  .foggy {
+    background: linear-gradient(to bottom, #d7d2cc, #304352);
+  }
+
+  
+  
+    .raindrop { position: absolute; width: 2px; height: 15px; background: rgba(255,255,255,.4); bottom: 100%; animation: rainDrop .7s linear infinite; }
+    @keyframes rainDrop { to { transform: translateY(110vh); } }
+
+    .lightning { position: absolute; inset: 0; background: rgba(255,255,255,.8); animation: flash .2s ease-in-out; z-index: 1; }
+    @keyframes flash { 0%,20%,40%,100% {opacity:0;} 10%,30% {opacity:1;} }
+
+    .snowflake { position: absolute; top: -10px; font-size: 12px; animation: snowFall linear infinite; opacity: .8; }
+    @keyframes snowFall { 0% { transform: translateY(-10px) translateX(0); } 100% { transform: translateY(110vh) translateX(20px); } }
+
+    iframe { width: 100%; height: 300px; border: none; border-radius: 10px; }
+    .hourly-scroll { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; }
+    .hour-card { min-width: 110px; border-radius: 10px; padding: 10px; background: rgba(255,255,255,.2); text-align:center; }
+
+    .glow-bg { position: absolute; width: 400px; height: 400px; background: radial-gradient(circle, rgba(0,212,255,.3) 0%, transparent 70%); border-radius: 50%; filter: blur(50px); z-index: 0; animation: pulse 6s ease-in-out infinite; margin:auto; left:0; right:0;}
+    @keyframes pulse {0%,100%{transform:scale(1);opacity:.6;}50%{transform:scale(1.2);opacity:.8;}}
+    .widget { position: relative; z-index: 1; width: 90%; max-width: 400px; background: rgba(255,255,255,.05); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,.4); text-align: center; margin: auto; }
+    .location { font-size: 12px; margin-bottom: 8px; color: #ccc; }
+    .top { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; opacity: .9; }
+    .emoji { font-size: 24px; margin-bottom: 5px; }
+    .bar-container { position: relative; height: 8px; background: rgba(255,255,255,.2); border-radius: 4px; margin: 15px 0; overflow: hidden; }
+    .bar-fill { position: absolute; top: 0; left: 0; height: 100%; background: #a6e1fa; width: 0%; transition: width 1s ease-in-out; border-radius: 4px; }
+    .moon { position: absolute; top: -14px; width: 28px; height: 28px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 8px 3px #d1c4e9; transition: left 1s ease-in-out; }
+    .bottom { display: flex; justify-content: space-between; font-size: 16px; margin-top: 10px; }
+    .progress-info { margin-top: 10px; font-size: 14px; color: #a6e1fa; }
+
+    body.energy-saver * { transition: none !important; animation: none !important; box-shadow: none !important; }
+  
+  
+  /* Festival styles merged with your app */
+.festival-box {
+  width: 100%;
+  max-width: 290px;
+  padding: 15px;
+  margin: auto;
+  border-radius: 15px;
+  background: rgba(255,255,255,.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.festival-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #f39c12;
+  margin-bottom: 8px;
+  animation: bounce 1s infinite alternate;
+}
+
+.greeting {
+  font-size: 16px;
+  color: #74b9ff;
+}
+
+.no-festival {
+  color: #b2bec3;
+  font-style: italic;
+}
+
+/* Bouncing animation */
+@keyframes bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-8px); }
+}
+
+/* Confetti effect */
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fd79a8;
+  top: 20;
+  border-radius: 40%;
+  animation: fall 2s linear infinite;
+}
+
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(250px) rotate(360deg); opacity:0; }
+}
+  
+  </style>
+</head>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="hamburger" id="hamburger"><div></div><div></div><div></div></div>
+  <ul id="nav-links">
+    <li id="openSignUp">Sign Up</li>
+    <li id="openLogin">Login</li>
+  </ul>
+</nav>
+  
+  
+
+<!-- Page Container -->
+<div class="page-container">
+
+<!-- Sign-Up Modal -->
+<div id="signupModal" class="modal auth-modal">
+  <div class="modal-content">
+    <span class="close" id="closeSignUp">&times;</span>
+    <h2>Create Account</h2>
+    <form id="signupForm">
+      <label for="name">Full Name</label>
+      <input type="text" id="name" placeholder="Enter full name" required>
+      <div id="nameError" class="error"></div>
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="Enter email" required>
+      <div id="emailError" class="error"></div>
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Enter password" required>
+      <div id="passwordError" class="error"></div>
+      <label for="confirmPassword">Confirm Password</label>
+      <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+      <div id="confirmPasswordError" class="error"></div>
+      <button type="submit">Sign Up</button>
+      <div id="signupSuccess" class="success"></div>
+    </form>
+    <div class="redirect-login">Already have an account? <a href="#" id="switchToLogin">Login</a></div>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal auth-modal">
+  <div class="modal-content">
+    <span class="close" id="closeLogin">&times;</span>
+    <h2>Login</h2>
+    <form id="loginForm">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" placeholder="Enter email" required>
+      <div id="loginEmailError" class="error"></div>
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter password" required>
+      <div id="loginPasswordError" class="error"></div>
+      <button type="submit">Login</button>
+      <div id="loginSuccess" class="success"></div>
+    </form>
+    <div class="redirect-login"><a href="#" id="forgotPassword">Forgot Password?</a></div>
+  </div>
+</div>
+
+<!-- Weather Overlay -->
+<div id="weatherPage" class="modal">
+  <div class="modal-content" style="max-width:800px;width:95%;overflow-y:auto;">
+    <span class="close" id="closeWeather">&times;</span>
+    <h1>Weather Dashboard</h1>
+    <div class="search-container">
+      <input type="text" id="searchInputPage" placeholder="Enter city, state, district, locality, country">
+      <button id="searchBtnPage">Search</button>
+    </div>
+    <div class="dashboard">
+      <div class="card">
+        <div class="label">Air Quality (PM2.5)</div>
+        <div class="bar-container"><div id="aqi-bar-page" class="bar"></div></div>
+        <div id="aqi-value-page" class="value-label"></div>
+      </div>
+      <div class="card">
+        <div class="label">Air Pressure (hPa)</div>
+        <div class="bar-container"><div id="pressure-bar-page" class="bar">0</div></div>
+        <div id="pressure-value-page" class="value-label"></div>
+      </div>
+      <div class="card">
+        <div class="label">Visibility (km)</div>
+        <div class="bar-container"><div id="visibility-bar-page" class="bar">0</div></div>
+        <div id="visibility-value-page" class="value-label"></div>
+      </div>
+      <div class="card">
+        <div class="label">UV Index</div>
+        <div class="bar-container"><div id="uv-bar-page" class="bar">0</div></div>
+        <div id="uv-value-page" class="value-label"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div> <!-- End page-container -->
+
+
+<body class="light">
+  <div class="toggle-btn" id="toggleBtn"><button id="darkToggle">?? Dark Mode</button></div>
+  <div class="background" id="background"></div>
+
+  <div class="container">
+    <h1>??? Global Weather App</h1>
+    <input type="text" id="cityInput" placeholder="Enter city or PIN code"/>
+    <button id="btnSearch">?? Search</button>
+    <button id="btnLocate">?? Use My Location</button>
+
+    <div class="section" id="currentWeather">?? Waiting for input...</div>
+    <div class="section" id="forecast"></div>
+
+    <div class="section"><h3>??? Live Radar Map</h3><iframe id="radarMap" src=""></iframe></div>
+
+    <div class="section"><h3>? Hourly Forecast</h3><div class="hourly-scroll" id="hourlyForecast"></div></div>
+
+    <div class="section">
+      <div class="glow-bg"></div>
+      <div class="widget">
+        <div class="location" id="location">Fetching location...</div>
+        <div class="top" id="icon-row"></div>
+        <div class="bar-container" id="bar">
+          <div class="bar-fill" id="fill"></div>
+          <div class="moon" id="moon">??</div>
+        </div>
+        <div class="bottom" id="time-row"></div>
+        <div class="progress-info" id="progress">--</div>
+      </div>
+    </div>
+
+    <div class="section" id="moodActivity"><h3>?? Mood & Activity</h3><p id="moodText">--</p></div>
+    <div class="section" id="clothing"><h3>?? Clothing Advice</h3><p id="clothingText">--</p></div>
+
+    <div class="section">
+      <h3>? Energy Saver</h3>
+      <button id="btnEnergy">Toggle Energy Saver</button>
+      <p id="energyStatus">Normal mode</p>
+    </div>
+
+    <div class="section">
+      <h3>?? Weather Wallpaper</h3>
+      <button id="btnWallpaper">Download Wallpaper</button>
+    </div>
+  </div>
+
+  <!-- Add this inside your container at the bottom -->
+<div class="section" id="festivalSection">
+  <h3>?? Today's Festival</h3>
+  <div class="festival-box" id="festivalBox">Loading...</div>
+</div>
+
+  <!-- Load libraries FIRST -->
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <!-- App script -->
+  <script>
+
+
+// Navbar toggle
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('nav-links');
+hamburger.addEventListener('click', () => navLinks.classList.toggle('show'));
+document.addEventListener('click', e => { if(!hamburger.contains(e.target)&&!navLinks.contains(e.target)) navLinks.classList.remove('show'); });
+
+// Modals
+const signupModal = document.getElementById('signupModal');
+const loginModal = document.getElementById('loginModal');
+document.getElementById('openSignUp').addEventListener('click', () => signupModal.style.display='flex');
+document.getElementById('openLogin').addEventListener('click', () => loginModal.style.display='flex');
+document.getElementById('closeSignUp').addEventListener('click', () => signupModal.style.display='none');
+document.getElementById('closeLogin').addEventListener('click', () => loginModal.style.display='none');
+window.addEventListener('click', e => { if(e.target===signupModal) signupModal.style.display='none'; if(e.target===loginModal) loginModal.style.display='none'; });
+document.getElementById('switchToLogin').addEventListener('click', () => { signupModal.style.display='none'; loginModal.style.display='flex'; document.getElementById('loginEmail').value=document.getElementById('email').value; });
+
+// Users storage
+let users = [];
+
+// Sign-Up
+document.getElementById('signupForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  ['nameError','emailError','passwordError','confirmPasswordError','signupSuccess'].forEach(id=>document.getElementById(id).textContent='');
+  const name=document.getElementById('name').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const confirmPassword=document.getElementById('confirmPassword').value;
+  let valid=true;
+  if(name===''){document.getElementById('nameError').textContent='Name required'; valid=false;}
+  if(!/^[^ ]+@[^ ]+\.[a-z]{2,3}$/.test(email)){document.getElementById('emailError').textContent='Invalid email'; valid=false;}
+  if(password.length<6){document.getElementById('passwordError').textContent='Password min 6 chars'; valid=false;}
+  if(password!==confirmPassword){document.getElementById('confirmPasswordError').textContent='Passwords do not match'; valid=false;}
+  if(valid){
+    if(users.find(u=>u.email===email)){document.getElementById('signupSuccess').textContent='Email already exists'; return;}
+    users.push({name,email,password});
+    document.getElementById('signupSuccess').textContent='Sign up successful! Redirecting to login...';
+    this.reset();
+    setTimeout(()=>{signupModal.style.display='none'; loginModal.style.display='flex'; document.getElementById('loginEmail').value=email;},1000);
+  }
+});
+
+// Login
+let weatherPage=document.getElementById('weatherPage');
+const apiKey="cea950af890c4ecc98e85419251207";
+let weatherLinkAdded=false;
+
+document.getElementById('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  ['loginEmailError','loginPasswordError','loginSuccess'].forEach(id=>document.getElementById(id).textContent='');
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  let valid=true;
+  if(!/^[^ ]+@[^ ]+\.[a-z]{2,3}$/.test(email)){document.getElementById('loginEmailError').textContent='Invalid email'; valid=false;}
+  if(password===''){document.getElementById('loginPasswordError').textContent='Password required'; valid=false;}
+  if(valid){
+    const user=users.find(u=>u.email===email&&u.password===password);
+    if(user){
+      document.getElementById('loginSuccess').textContent='Login successful!';
+      setTimeout(()=>{
+        loginModal.style.display='none';
+        if(!weatherLinkAdded){
+          const li=document.createElement('li');
+          li.textContent='Weather Conditions';
+          li.id='weatherLink';
+          navLinks.appendChild(li);
+          weatherLinkAdded=true;
+          document.getElementById('weatherLink').addEventListener('click',()=>{weatherPage.style.display='flex'; detectLocationPage();});
+        }
+      },1000);
+    } else document.getElementById('loginSuccess').textContent='Email or password incorrect';
+  }
+});
+
+// Forgot Password OTP
+document.getElementById('forgotPassword').addEventListener('click', function(e){
+  e.preventDefault();
+  const email=prompt('Enter your registered email:');
+  if(!email||!/^[^ ]+@[^ ]+\.[a-z]{2,3}$/.test(email)){alert('Invalid email'); return;}
+  const user=users.find(u=>u.email===email);
+  if(!user){alert('Email not registered'); return;}
+  const otp=Math.floor(100000+Math.random()*900000);
+  const enteredOtp=prompt(`Your OTP is: ${otp}\nEnter OTP to reset password:`);
+  if(enteredOtp==otp){
+    const newPassword=prompt('OTP verified! Enter new password (min 6 chars):');
+    if(newPassword&&newPassword.length>=6){user.password=newPassword; alert('Password reset successful!');}
+    else alert('Password too short');
+  } else alert('Wrong OTP!');
+});
+
+// Animate numbers
+function animateValuePage(element,start,end,duration){
+  let startTimestamp=null;
+  const step=timestamp=>{
+    if(!startTimestamp) startTimestamp=timestamp;
+    const progress=Math.min((timestamp-startTimestamp)/duration,1);
+    element.innerText=Math.round(progress*(end-start)+start);
+    if(progress<1) window.requestAnimationFrame(step);
+  };
+  window.requestAnimationFrame(step);
+}
+
+// Update dashboard
+async function updateDashboardPage(location){
+  try{
+    let query=location;
+    if(typeof location==='object'&&location.lat&&location.lon) query=`${location.lat},${location.lon}`;
+    const res=await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${query}&aqi=yes`);
+    const data=await res.json();
+    if(data.error){alert("Location not found"); return;}
+    const metrics={
+      aqi:{value:data.current.air_quality.pm2_5,max:150,color:v=>v<=50?'#4CAF50':v<=100?'#FFC107':'#F44336',unit:'µg/m³'},
+      pressure:{value:data.current.pressure_mb,max:1050,min:950,color:v=>v<1000?'#FFC107':'#4CAF50',unit:'hPa'},
+      visibility:{value:data.current.vis_km,max:20,color:v=>v>=10?'#4CAF50':v>=5?'#FFC107':'#F44336',unit:'km'},
+      uv:{value:data.current.uv,max:11,color:v=>v<=2?'#4CAF50':v<=5?'#FFC107':'#F44336',unit:''}
+    };
+    Object.keys(metrics).forEach(key=>{
+      const metric=metrics[key];
+      const bar=document.getElementById(`${key}-bar-page`);
+      const valueLabel=document.getElementById(`${key}-value-page`);
+      let percent;
+      if(key==='pressure') percent=((metric.value-metric.min)/(metric.max-metric.min))*100;
+      else percent=(metric.value/metric.max)*100;
+      percent=Math.min(percent,100);
+      bar.style.width=`${percent}%`;
+      bar.style.backgroundColor=metric.color(metric.value);
+      animateValuePage(valueLabel, 0, Math.round(metric.value), 1500);
+      valueLabel.innerText=`Value: ${metric.value} ${metric.unit}`;
+    });
+  } catch(err){
+    console.error(err);
+    alert("API error or invalid location");
+  }
+}
+
+// Detect user location
+function detectLocationPage(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(position=>{
+      const coords={lat:position.coords.latitude, lon:position.coords.longitude};
+      updateDashboardPage(coords);
+    }, ()=>{
+      updateDashboardPage("Delhi, India"); // fallback location
+    });
+  } else {
+    updateDashboardPage("Delhi, India"); // fallback location
+  }
+}
+
+// Search functionality
+document.getElementById('searchBtnPage').addEventListener('click', ()=>{
+  const inputCity=document.getElementById('searchInputPage').value.trim();
+  if(inputCity){
+    updateDashboardPage(inputCity);
+  }
+});
+
+// Close weather overlay
+document.getElementById('closeWeather').addEventListener('click', ()=>{
+  weatherPage.style.display='none';
+});
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+      const apiKey = "4c5639d6e4d04ed9960175850251007";
+      const background = document.getElementById("background");
+      const $ = id => document.getElementById(id);
+      let energySaver = false;
+      let lastWeather = null;
+
+      $("darkToggle").addEventListener("click", () => { document.body.classList.toggle("dark"); document.body.classList.toggle("light"); });
+      $("btnSearch").addEventListener("click", () => { const city = $("cityInput").value.trim(); if (!city) return alert("Please enter a location"); fetchWeather(city); updateRadarFromCity(city); });
+      $("btnLocate").addEventListener("click", getWeatherByLocation);
+      $("btnEnergy").addEventListener("click", toggleEnergySaver);
+      $("btnWallpaper").addEventListener("click", generateWallpaper);
+
+      function clearBackground(){ background.className = "background"; background.innerHTML = ""; }
+
+      function getSkyGradient(hour) {
+        if (hour >= 5 && hour < 7)  return "linear-gradient(to top, #ff9966, #ff5e62)";
+        if (hour >= 7 && hour < 18) return "linear-gradient(to top, #87ceeb, #fffde4)";
+        if (hour >= 18 && hour < 20) return "linear-gradient(to top, #fbc2eb, #a6c1ee)";
+        return "linear-gradient(to top, #0f2027, #203a43, #2c5364)";
+      }
+      function addRain(){ if (energySaver) return; for (let i=0;i<60;i++){ const d=document.createElement("div"); d.className="raindrop"; d.style.left=`${Math.random()*100}vw`; d.style.animationDuration=`${0.6+Math.random()*0.5}s`; background.appendChild(d);} }
+      function addLightning(){ if (energySaver) return; let c=0; const max=6; (function flash(){ if(c>=max) return; const f=document.createElement("div"); f.className="lightning"; background.appendChild(f); setTimeout(()=>f.remove(),300); c++; setTimeout(flash,Math.random()*3000+1000);} )(); }
+      function addSnow(){ if (energySaver) return; for (let i=0;i<50;i++){ const s=document.createElement("div"); s.className="snowflake"; s.textContent="?"; s.style.left=`${Math.random()*100}vw`; s.style.animationDuration=`${5+Math.random()*5}s`; s.style.animationDelay=`${Math.random()*5}s`; background.appendChild(s);} }
+
+      function setBackground(conditionText, code, isRainingNow=false){
+        clearBackground();
+        const thunder=[1087,1273,1276,1279,1282];
+        const rain=[1063,1150,1153,1180,1183,1186,1189,1192,1195,1204,1207,1240,1243,1246];
+        const fog=[1030,1135,1147];
+        const cloudy=[1003,1006,1009];
+        const snow=[1114,1117,1210,1213,1216,1219,1222,1225,1255,1258,1279,1282];
+
+        if (thunder.includes(code)) { background.classList.add("thunderstorm"); addRain(); addLightning(); }
+        else if (rain.includes(code)) { isRainingNow ? (background.classList.add("rain"), addRain()) : background.classList.add("cloudy"); }
+        else if (snow.includes(code)) { background.classList.add("cloudy"); addSnow(); }
+        else if (fog.includes(code))  { background.classList.add("cloudy"); }
+        else if (cloudy.includes(code)) { background.classList.add("cloudy"); }
+        else { background.classList.add("sunny"); }
+
+        
+        function setBackground(conditionText, code){
+  clearBackground();
+
+  const thunder=[1087,1273,1276,1279,1282];
+  const rain=[1063,1150,1153,1180,1183,1186,1189,1192,1195,1204,1207,1240,1243,1246];
+  const fog=[1030,1135,1147];
+  const cloudy=[1003,1006,1009];
+  const snow=[1114,1117,1210,1213,1216,1219,1222,1225,1255,1258,1279,1282];
+
+  if (thunder.includes(code)) { 
+    background.classList.add("thunderstorm"); 
+    addRain(); 
+    addLightning(); 
+  }
+  else if (rain.includes(code)) { 
+    background.classList.add("rain"); 
+    addRain(); 
+  }
+  else if (snow.includes(code)) { 
+    background.classList.add("snowy"); 
+    addSnow(); 
+  }
+  else if (fog.includes(code))  { 
+    background.classList.add("foggy"); 
+  }
+  else if (cloudy.includes(code)) { 
+    background.classList.add("cloudy"); 
+  }
+  else { 
+    background.classList.add("sunny"); 
+    background.style.background = getSkyGradient(new Date().getHours());
+  }
+}
+        
+      }
+
+      function suggestActivity(temp, conditionText){
+        const t=Number(temp); const c=(conditionText||"").toLowerCase();
+        if (t > 35) return "?? Very hot! Stay hydrated and avoid peak sun.";
+        if (c.includes("thunder")) return "?? Thunderstorms around — stay indoors.";
+        if (c.includes("rain")) return "??? Cozy indoor time (book/movie).";
+        if (c.includes("snow")) return "?? Warm drinks & indoor fun!";
+        if (c.includes("clear") || c.includes("sunny")) return "?? Great for a walk or cycling!";
+        return "?? Easy day — do your favorite activity!";
+      }
+      function suggestClothing(temp, isRaining){
+        const t=Number(temp);
+        if (t < 10) return "?? Heavy jacket, gloves & warm layers.";
+        if (t < 20) return "?? Light sweater or jacket.";
+        if (t > 32) return "?? Breathable cotton, hat & sunglasses.";
+        if (isRaining) return "? Carry an umbrella or raincoat.";
+        return "?? Dress comfortably for the weather.";
+      }
+
+      function toggleEnergySaver(){
+        energySaver = !energySaver;
+        const status = $("energyStatus");
+        if (energySaver){
+          document.body.classList.add("energy-saver");
+
+          document.body.classList.add("energy-saver");
+          clearBackground();
+          status.textContent = "Energy Saver ON";
+        } else {
+          document.body.classList.remove("energy-saver");
+          status.textContent = "Normal mode";
+          if (lastWeather){
+            const { conditionText, conditionCode, isRainingNow } = lastWeather;
+            setBackground(conditionText, conditionCode, isRainingNow);
+          }
+        }
+      }
+
+      function generateWallpaper(){
+        if (!window.html2canvas){ alert("Wallpaper library not loaded yet. Try again in a moment."); return; }
+        html2canvas(document.querySelector(".background")).then(canvas=>{
+          const link=document.createElement("a");
+          link.download="weather_wallpaper.png";
+          link.href=canvas.toDataURL();
+          link.click();
+        });
+      }
+
+      async function fetchWeather(query){
+        const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(query)}&days=5&aqi=no&alerts=yes`;
+        try{
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (!data || !data.location) throw new Error("No data / invalid response");
+
+          const { current, location, forecast } = data;
+          const isRainingNow = Number(current.precip_mm) > 0;
+          const conditionText = current?.condition?.text || "Clear";
+          const conditionCode = current?.condition?.code || 1000;
+
+          lastWeather = { conditionText, conditionCode, isRainingNow };
+          setBackground(conditionText, conditionCode, isRainingNow);
+
+          $("currentWeather").innerHTML = `
+            <h2>${location.name}, ${location.region || ""} ${location.country}</h2>
+            <p><strong>??? Temp:</strong> ${current.temp_c} °C | Feels like: ${current.feelslike_c} °C</p>
+            <p><strong>??? Condition:</strong> ${conditionText} <img alt="" src="https:${current.condition.icon}"/></p>
+            <p><strong>?? Humidity:</strong> ${current.humidity}%</p>
+            <p><strong>??? Wind:</strong> ${current.wind_kph} km/h</p>
+            <p><strong>? Local Time:</strong> <span id="liveClock">Loading...</span></p>
+          `;
+
+          $("moodText").textContent = suggestActivity(current.temp_c, conditionText);
+          $("clothingText").textContent = suggestClothing(current.temp_c, isRainingNow);
+
+          let fHtml = "<h3>?? 3-Day Forecast</h3>";
+          (forecast?.forecastday || []).forEach(d=>{
+            fHtml += `
+              <p><strong>${d.date}</strong></p>
+              <p>??? ${d.day.maxtemp_c}°C / ${d.day.mintemp_c}°C</p>
+              <p>??? ${d.day.daily_chance_of_rain}% Rain Chance</p>
+              <p>${d.day.condition.text} <img alt="" src="https:${d.day.condition.icon}"/></p>
+              <hr/>
+            `;
+          });
+          $("forecast").innerHTML = fHtml;
+
+          const now = new Date(); const h = now.getHours();
+          const today = (forecast?.forecastday?.[0]?.hour || []).filter(x => new Date(x.time).getHours() >= h);
+          $("hourlyForecast").innerHTML = today.map(x=>{
+            const t = new Date(x.time).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",hour12:true});
+            return `<div class="hour-card">
+                      <p>${t}</p>
+                      <img alt="" src="https:${x.condition.icon}"/>
+                      <p>${x.temp_c}°C</p>
+                      <p>${x.condition.text}</p>
+                    </div>`;
+          }).join("");
+
+          updateSunWidget(location.name, forecast.forecastday[0].astro.sunrise, forecast.forecastday[0].astro.sunset);
+        } catch(err){
+          console.error("Weather error:", err);
+          $("currentWeather").innerHTML = "? Error fetching data. Try another city or check API key.";
+          $("forecast").innerHTML = "";
+          $("hourlyForecast").innerHTML = "";
+        }
+      }
+
+      function updateSunWidget(city, sunriseStr, sunsetStr){
+        $("location").textContent = `?? ${city}`;
+        function toDateTime(str){
+          const [time,mod] = str.split(" ");
+          let [h,m] = time.split(":"); h = parseInt(h,10);
+          if (mod === "PM" && h !== 12) h += 12;
+          if (mod === "AM" && h === 12) h = 0;
+          const d = new Date(); d.setHours(h, m, 0, 0); return d;
+        }
+        const sunrise = toDateTime(sunriseStr), sunset = toDateTime(sunsetStr), now = new Date();
+        const isNight = now < sunrise || now > sunset;
+        const iconRow = $("icon-row"), timeRow = $("time-row");
+        if (isNight) {
+          iconRow.innerHTML = `<div><div class="emoji">??</div><div>Sunset</div></div>
+                               <div><div class="emoji">??</div><div>Sunrise</div></div>`;
+          timeRow.innerHTML = `<span>${sunsetStr}</span><span>${sunriseStr}</span>`;
+        } else {
+          iconRow.innerHTML = `<div><div class="emoji">??</div><div>Sunrise</div></div>
+                               <div><div class="emoji">??</div><div>Sunset</div></div>`;
+          timeRow.innerHTML = `<span>${sunriseStr}</span><span>${sunsetStr}</span>`;
+        }
+
+        let total, elapsed;
+        if (isNight) {
+          if (sunrise < sunset) sunrise.setDate(sunrise.getDate() + 1);
+          total = sunrise - sunset;
+          elapsed = now - sunset;
+        } else {
+          total = sunset - sunrise;
+          elapsed = now - sunrise;
+        }
+
+        const progress = Math.max(0, Math.min(1, elapsed / total));
+        const bar = $("bar");
+        $("moon").style.left = `${progress * (bar.offsetWidth - 28)}px`;
+        $("fill").style.width = `${progress * 100}%`;
+        $("progress").textContent = `${isNight ? "?? Night" : "?? Day"} progress: ${Math.round(progress * 100)}%`;
+      }
+
+      function getWeatherByLocation(){
+        if (!navigator.geolocation){
+          $("currentWeather").textContent = "? Geolocation not supported by your browser.";
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            fetchWeather(`${coords.latitude},${coords.longitude}`);
+            updateRadar(coords.latitude, coords.longitude);
+          },
+          (err) => {
+            console.warn("Geolocation denied:", err);
+            $("currentWeather").textContent = "? Location access denied. Search a city manually.";
+          }
+        );
+      }
+
+      function updateRadar(lat, lon){
+        $("radarMap").src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=7&overlay=rain`;
+      }
+
+      async function updateRadarFromCity(city) {
+    try {
+        // Try Nominatim first
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`);
+        let data = await res.json();
+
+        if (!data || data.length === 0) {
+            // Fallback: use WeatherAPI
+            console.warn("Nominatim failed, using WeatherAPI coordinates...");
+            const weatherRes = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(city)}`);
+            const weatherData = await weatherRes.json();
+            if (weatherData && weatherData.location) {
+                const { lat, lon } = weatherData.location;
+                $("radarMap").src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=7&overlay=rain`;
+                return;
+            } else {
+                console.error("WeatherAPI fallback failed");
+                return;
+            }
+        }
+
+        // Nominatim worked
+        const { lat, lon } = data[0];
+        $("radarMap").src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=7&overlay=rain`;
+
+    } catch(err) {
+        console.error("Radar error:", err);
+    }
+}
+
+      function updateLiveClock(){
+        const now = new Date();
+        const t = now.toLocaleTimeString("en-IN", {hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true});
+        const liveClockElem = $("liveClock");
+        if (liveClockElem) liveClockElem.innerText = t;
+      }
+      setInterval(updateLiveClock, 1000);
+      updateLiveClock();
+
+      getWeatherByLocation();
+    });
+  
+  const festivalApiKey = 'Byn9CPMXAxI9YgLsVZuOJIAtCBYIWPGP';
+const festivalCountry = 'IN'; 
+const festivalYear = new Date().getFullYear();
+const festivalApiUrl = `https://calendarific.com/api/v2/holidays?&api_key=${festivalApiKey}&country=${festivalCountry}&year=${festivalYear}`;
+
+function createConfetti(box, count = 20) {
+  if (document.body.classList.contains("energy-saver")) return; // skip in energy saver
+  for(let i=0; i<count; i++){
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    confetti.style.left = Math.random()*100 + '%';
+    confetti.style.background = `hsl(${Math.random()*360}, 70%, 60%)`;
+    confetti.style.animationDuration = (Math.random()*2+1) + 's';
+    box.appendChild(confetti);
+    setTimeout(()=> confetti.remove(), 2000);
+  }
+}
+
+async function checkTodayFestival() {
+  try {
+    const res = await fetch(festivalApiUrl);
+    const data = await res.json();
+    const festivalBox = document.getElementById('festivalBox');
+    const today = new Date().toISOString().split('T')[0];
+    const todayFestivals = data.response.holidays.filter(f => f.date.iso === today);
+
+    festivalBox.innerHTML = '';
+
+    if(todayFestivals.length > 0){
+      const festival = todayFestivals[0];
+      festivalBox.innerHTML = `
+        <div class="festival-name">${festival.name}</div>
+        <div class="greeting">?? Happy ${festival.name}! ??</div>
+      `;
+      createConfetti(festivalBox, 30);
+    } else {
+      festivalBox.innerHTML = `<div class="no-festival">No festival today.</div>`;
+    }
+  } catch(err){
+    console.error("Festival API error:", err);
+    document.getElementById('festivalBox').textContent = "? Could not load festival data.";
+  }
+}
+
+// Load on app start
+checkTodayFestival();
+
+// Update daily at midnight
+const now = new Date();
+const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() +1, 0,0,0) - now;
+setTimeout(function() {
+  checkTodayFestival();
+  setInterval(checkTodayFestival, 24*60*60*1000); // Every 24 hours
+}, msUntilMidnight);
+  
+  </script>    
+</body>
+</html>
